@@ -1,0 +1,3 @@
+tls:
+  min_version: "1.0"
+  cipher: "RSA-3DES-SHA"
