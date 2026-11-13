@@ -112,7 +112,10 @@ def test_scan_skips_dirs_symlinks_and_big_files(tmp_path):
     (tmp_path / "node_modules" / "x.js").write_text("RSA")
     (tmp_path / "ok.py").write_text("print(1)\n")
     (tmp_path / "big.py").write_bytes(b"#" * 1_100_000)
-    (tmp_path / "link.py").symlink_to(tmp_path / "ok.py")
+    try:
+        (tmp_path / "link.py").symlink_to(tmp_path / "ok.py")
+    except (OSError, NotImplementedError):
+        pass  # Windows without admin/developer mode can't create symlinks
     paths = [f.path for f in scan_directory(tmp_path)]
     assert paths == ["ok.py"]
 
