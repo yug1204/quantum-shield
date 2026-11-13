@@ -78,6 +78,17 @@ def test_upload_then_query(client):
     assert client.get("/projects/999").status_code == 404
 
 
+def test_parse_project(client):
+    r = client.post("/upload", files={"file": ("sample.zip", _zip_bytes(), "application/zip")})
+    pid = r.json()["project_id"]
+    p = client.post(f"/projects/{pid}/parse")
+    assert p.status_code == 200, p.text
+    repo = p.json()["repositories"][0]
+    assert repo["summary"]["files_parsed"] == 2          # auth.py + Signer.java (the .c file is skipped)
+    assert repo["summary"]["skipped_unsupported_language"] == {"c": 1}
+    assert client.post("/projects/999/parse").status_code == 404
+
+
 def test_upload_rejects_non_zip(client):
     r = client.post("/upload", files={"file": ("x.txt", b"hi", "text/plain")})
     assert r.status_code == 400

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import Base, engine
-from .routers import ingest
+from .routers import ingest, parse
 
 
 @asynccontextmanager
@@ -32,3 +32,4 @@ def health() -> dict:
 
 
 app.include_router(ingest.router)
+app.include_router(parse.router)

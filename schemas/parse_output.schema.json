@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Quantum Shield - Phase 2 parse output (v1.0)",
+  "description": "Contract between Ritesh (parsers/graph) and Shree (crypto detection, Phase 3). Shree reads `files[].functions[].calls[]` and `files[].module_calls[]`: each call has `resolved` (import aliases expanded, e.g. java.security.MessageDigest.getInstance) plus literal `args` (e.g. [\"SHA-1\"], [2048]).",
+  "type": "object",
+  "required": ["schema_version", "summary", "files", "call_graph"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "files_parsed": { "type": "integer" },
+        "files_with_errors": { "type": "integer" },
+        "skipped_unsupported_language": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "classes": { "type": "integer" },
+        "functions": { "type": "integer" },
+        "calls": { "type": "integer" },
+        "resolved_edges": { "type": "integer" }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "language", "parser", "imports", "classes", "functions", "module_calls", "errors"],
+        "properties": {
+          "path": { "type": "string" },
+          "language": { "enum": ["python", "java"] },
+          "parser": { "enum": ["python-ast", "java-light", "n/a"] },
+          "package": { "type": "string", "description": "Java only" },
+          "imports": { "type": "array", "items": { "type": "object" } },
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" }, "qualname": { "type": "string" },
+                "kind": { "type": "string" }, "line": { "type": "integer" },
+                "end_line": { "type": "integer" }, "bases": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "qualname", "name", "line", "end_line", "params", "calls"],
+              "properties": {
+                "id": { "type": "string", "description": "unique inside the file; overloads get #2, #3..." },
+                "qualname": { "type": "string" }, "name": { "type": "string" },
+                "class": { "type": ["string", "null"] },
+                "kind": { "enum": ["function", "method", "constructor"] },
+                "line": { "type": "integer" }, "end_line": { "type": "integer" },
+                "params": { "type": "array", "items": { "type": "string" } },
+                "calls": { "type": "array", "items": { "$ref": "#/$defs/call" } }
+              }
+            }
+          },
+          "module_calls": { "type": "array", "items": { "$ref": "#/$defs/call" }, "description": "calls outside any function (module level / field initializers / decorators)" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "call_graph": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "description": "<path>::<function id>" },
+              "path": { "type": "string" }, "language": { "type": "string" },
+              "qualname": { "type": "string" }, "name": { "type": "string" },
+              "class": { "type": ["string", "null"] }, "line": { "type": "integer" }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string", "description": "callee as written" },
+              "resolved": { "type": "string", "description": "callee with import aliases expanded" },
+              "to_node": { "type": ["string", "null"], "description": "node id if the callee is a function in this project, else null (library call)" },
+              "kind": { "enum": ["call", "new"] },
+              "line": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "call": {
+      "type": "object",
+      "required": ["name", "resolved", "kind", "line", "args", "kwargs"],
+      "properties": {
+        "name": { "type": "string" },
+        "resolved": { "type": "string" },
+        "kind": { "enum": ["call", "new"] },
+        "line": { "type": "integer" },
+        "args": { "type": "array", "description": "literal value per positional arg (string or number), null when not a literal" },
+        "kwargs": { "type": "object", "description": "literal keyword args (Python only)" }
+      }
+    }
+  }
+}
